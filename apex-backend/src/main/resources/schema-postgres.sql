@@ -1,0 +1,160 @@
+-- Apex GST Suite Schema Initializer (PostgreSQL)
+
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+
+CREATE TABLE IF NOT EXISTS companies (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    legal_name VARCHAR(255) NOT NULL,
+    trade_name VARCHAR(255),
+    gstin VARCHAR(15) UNIQUE NOT NULL,
+    pan VARCHAR(10),
+    state_code VARCHAR(2) NOT NULL,
+    state_name VARCHAR(100),
+    address_line1 TEXT NOT NULL,
+    address_line2 TEXT,
+    city VARCHAR(100) NOT NULL,
+    pincode VARCHAR(6) NOT NULL,
+    email VARCHAR(150),
+    phone VARCHAR(20),
+    upi_id VARCHAR(100),
+    bank_name VARCHAR(100),
+    account_number VARCHAR(50),
+    ifsc_code VARCHAR(15),
+    branch_name VARCHAR(100),
+    logo_url TEXT,
+    signature_url TEXT,
+    invoice_prefix VARCHAR(20) DEFAULT 'INV',
+    next_invoice_sequence BIGINT DEFAULT 1,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS users (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    company_id UUID REFERENCES companies(id) ON DELETE CASCADE,
+    email VARCHAR(150) UNIQUE NOT NULL,
+    password_hash TEXT NOT NULL,
+    salt TEXT NOT NULL,
+    full_name VARCHAR(150) NOT NULL,
+    phone VARCHAR(20),
+    role VARCHAR(50) DEFAULT 'ADMIN',
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS parties (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    company_id UUID REFERENCES companies(id) ON DELETE CASCADE,
+    party_type VARCHAR(20) NOT NULL CHECK (party_type IN ('CUSTOMER', 'VENDOR', 'BOTH')),
+    name VARCHAR(255) NOT NULL,
+    gstin VARCHAR(15),
+    pan VARCHAR(10),
+    state_code VARCHAR(2) NOT NULL,
+    state_name VARCHAR(100),
+    phone VARCHAR(20),
+    email VARCHAR(150),
+    billing_address TEXT,
+    shipping_address TEXT,
+    city VARCHAR(100),
+    pincode VARCHAR(6),
+    credit_period_days INT DEFAULT 30,
+    credit_limit NUMERIC(12, 2) DEFAULT 0.00,
+    opening_balance NUMERIC(12, 2) DEFAULT 0.00,
+    current_balance NUMERIC(12, 2) DEFAULT 0.00,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS items (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    company_id UUID REFERENCES companies(id) ON DELETE CASCADE,
+    name VARCHAR(255) NOT NULL,
+    sku VARCHAR(100),
+    barcode VARCHAR(100),
+    category VARCHAR(100),
+    item_type VARCHAR(10) DEFAULT 'GOODS' CHECK (item_type IN ('GOODS', 'SERVICE')),
+    hsn_sac_code VARCHAR(10) NOT NULL,
+    uom VARCHAR(20) DEFAULT 'PCS',
+    purchase_price NUMERIC(12, 2) DEFAULT 0.00,
+    selling_price NUMERIC(12, 2) NOT NULL,
+    gst_rate NUMERIC(5, 2) NOT NULL DEFAULT 18.00,
+    cess_rate NUMERIC(5, 2) DEFAULT 0.00,
+    current_stock NUMERIC(12, 3) DEFAULT 0.000,
+    min_stock_alert NUMERIC(12, 3) DEFAULT 5.000,
+    batch_tracking_enabled BOOLEAN DEFAULT FALSE,
+    batch_number VARCHAR(100),
+    expiry_date DATE,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS invoices (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    company_id UUID REFERENCES companies(id) ON DELETE CASCADE,
+    party_id UUID REFERENCES parties(id),
+    invoice_number VARCHAR(50) NOT NULL,
+    invoice_type VARCHAR(20) NOT NULL CHECK (invoice_type IN ('TAX_INVOICE', 'BILL_OF_SUPPLY', 'EXPORT', 'POS')),
+    invoice_date DATE NOT NULL,
+    due_date DATE,
+    place_of_supply VARCHAR(2) NOT NULL,
+    is_inter_state BOOLEAN NOT NULL DEFAULT FALSE,
+    is_reverse_charge BOOLEAN NOT NULL DEFAULT FALSE,
+    subtotal NUMERIC(14, 2) NOT NULL,
+    discount_amount NUMERIC(12, 2) DEFAULT 0.00,
+    taxable_amount NUMERIC(14, 2) NOT NULL,
+    cgst_amount NUMERIC(12, 2) DEFAULT 0.00,
+    sgst_amount NUMERIC(12, 2) DEFAULT 0.00,
+    igst_amount NUMERIC(12, 2) DEFAULT 0.00,
+    cess_amount NUMERIC(12, 2) DEFAULT 0.00,
+    round_off NUMERIC(5, 2) DEFAULT 0.00,
+    grand_total NUMERIC(14, 2) NOT NULL,
+    payment_status VARCHAR(20) DEFAULT 'UNPAID' CHECK (payment_status IN ('UNPAID', 'PARTIALLY_PAID', 'PAID', 'OVERDUE', 'CANCELLED')),
+    amount_paid NUMERIC(14, 2) DEFAULT 0.00,
+    balance_amount NUMERIC(14, 2) NOT NULL,
+    payment_mode VARCHAR(50),
+    upi_qr_payload TEXT,
+    notes TEXT,
+    terms_and_conditions TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (company_id, invoice_number)
+);
+
+CREATE TABLE IF NOT EXISTS invoice_items (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    invoice_id UUID REFERENCES invoices(id) ON DELETE CASCADE,
+    item_id UUID REFERENCES items(id),
+    item_name VARCHAR(255) NOT NULL,
+    hsn_sac_code VARCHAR(10) NOT NULL,
+    quantity NUMERIC(12, 3) NOT NULL,
+    uom VARCHAR(20) NOT NULL,
+    unit_price NUMERIC(12, 2) NOT NULL,
+    discount_percent NUMERIC(5, 2) DEFAULT 0.00,
+    discount_amount NUMERIC(12, 2) DEFAULT 0.00,
+    taxable_value NUMERIC(14, 2) NOT NULL,
+    gst_rate NUMERIC(5, 2) NOT NULL,
+    cgst_rate NUMERIC(5, 2) DEFAULT 0.00,
+    cgst_amount NUMERIC(12, 2) DEFAULT 0.00,
+    sgst_rate NUMERIC(5, 2) DEFAULT 0.00,
+    sgst_amount NUMERIC(12, 2) DEFAULT 0.00,
+    igst_rate NUMERIC(5, 2) DEFAULT 0.00,
+    igst_amount NUMERIC(12, 2) DEFAULT 0.00,
+    cess_rate NUMERIC(5, 2) DEFAULT 0.00,
+    cess_amount NUMERIC(12, 2) DEFAULT 0.00,
+    total_amount NUMERIC(14, 2) NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS stock_movements (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    company_id UUID REFERENCES companies(id) ON DELETE CASCADE,
+    item_id UUID REFERENCES items(id) ON DELETE CASCADE,
+    movement_type VARCHAR(30) NOT NULL,
+    quantity_change NUMERIC(12, 3) NOT NULL,
+    balance_after NUMERIC(12, 3) NOT NULL,
+    reference_number VARCHAR(100),
+    remarks TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
