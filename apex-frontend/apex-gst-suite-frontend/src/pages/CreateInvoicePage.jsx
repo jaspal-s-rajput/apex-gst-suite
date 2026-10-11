@@ -26,25 +26,8 @@ export default function CreateInvoicePage({ company, onBack, onInvoiceSaved }) {
   const [notes, setNotes] = useState('Thank you for choosing Apex Enterprises!');
   const [termsAndConditions, setTermsAndConditions] = useState('Payment is due within 30 days. Goods once sold will not be taken back.');
   
-  // Line items state
-  const [lines, setLines] = useState([
-    {
-      itemId: '',
-      itemName: 'Ergonomic Aluminium Laptop Stand',
-      hsnSacCode: '8473',
-      quantity: 2,
-      uom: 'PCS',
-      unitPrice: 1499.00,
-      discountPercent: 0,
-      discountAmount: 0,
-      gstRate: 18.00,
-      taxableValue: 2998.00,
-      cgstAmount: 269.82,
-      sgstAmount: 269.82,
-      igstAmount: 0.00,
-      totalAmount: 3537.64
-    }
-  ]);
+  // Line items state - starts 100% clean and empty
+  const [lines, setLines] = useState([]);
 
   const [saving, setSaving] = useState(false);
   const [toastMessage, setToastMessage] = useState(null);
@@ -161,9 +144,7 @@ export default function CreateInvoicePage({ company, onBack, onInvoiceSaved }) {
 
   // Delete line item
   const deleteLine = (index) => {
-    if (lines.length > 1) {
-      setLines(lines.filter((_, i) => i !== index));
-    }
+    setLines(lines.filter((_, i) => i !== index));
   };
 
   // Recompute when place of supply changes
@@ -207,6 +188,15 @@ export default function CreateInvoicePage({ company, onBack, onInvoiceSaved }) {
 
   // Handle Save
   const handleSaveInvoice = async () => {
+    if (lines.length === 0) {
+      alert('Please add at least one line item to the invoice.');
+      return;
+    }
+    const hasEmptyItem = lines.some(l => !l.itemName?.trim());
+    if (hasEmptyItem) {
+      alert('Please provide a name or select an item from catalog for all line items.');
+      return;
+    }
     setSaving(true);
     try {
       const payload = {
@@ -398,132 +388,153 @@ export default function CreateInvoicePage({ company, onBack, onInvoiceSaved }) {
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              {lines.map((line, idx) => (
-                <div 
-                  key={idx} 
-                  style={{ 
-                    background: 'var(--bg-elevated)', 
-                    border: '1px solid var(--border-subtle)', 
-                    borderRadius: 'var(--radius-md)', 
-                    padding: '1rem',
-                    position: 'relative'
-                  }}
-                >
-                  <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr 0.8fr 1fr', gap: '0.75rem', marginBottom: '0.75rem' }}>
-                    <div>
-                      <label className="form-label" style={{ fontSize: '11px' }}>Quick Item Selector</label>
-                      <select 
-                        className="form-control"
-                        value={line.itemId}
-                        onChange={(e) => updateLine(idx, 'itemId', e.target.value)}
-                        style={{ height: '34px', fontSize: '12px' }}
-                      >
-                        <option value="">-- Choose from Catalog --</option>
-                        {itemsCatalog.map(item => (
-                          <option key={item.id} value={item.id}>{item.name}</option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="form-label" style={{ fontSize: '11px' }}>Item Name / Description</label>
-                      <input 
-                        type="text" 
-                        className="form-control"
-                        value={line.itemName}
-                        onChange={(e) => updateLine(idx, 'itemName', e.target.value)}
-                        placeholder="Product name"
-                        style={{ height: '34px', fontSize: '12px' }}
-                      />
-                    </div>
-
-                    <div>
-                      <label className="form-label" style={{ fontSize: '11px' }}>HSN/SAC</label>
-                      <input 
-                        type="text" 
-                        className="form-control"
-                        value={line.hsnSacCode}
-                        onChange={(e) => updateLine(idx, 'hsnSacCode', e.target.value)}
-                        style={{ height: '34px', fontSize: '12px', fontFamily: 'var(--font-mono)' }}
-                      />
-                    </div>
-
-                    <div>
-                      <label className="form-label" style={{ fontSize: '11px' }}>GST Tax Rate</label>
-                      <select 
-                        className="form-control"
-                        value={line.gstRate}
-                        onChange={(e) => updateLine(idx, 'gstRate', parseFloat(e.target.value))}
-                        style={{ height: '34px', fontSize: '12px' }}
-                      >
-                        <option value="0">0% (Exempt)</option>
-                        <option value="5">5% GST</option>
-                        <option value="12">12% GST</option>
-                        <option value="18">18% GST (Standard)</option>
-                        <option value="28">28% GST</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1.2fr auto', gap: '0.75rem', alignItems: 'flex-end' }}>
-                    <div>
-                      <label className="form-label" style={{ fontSize: '11px' }}>Qty & Unit</label>
-                      <div style={{ display: 'flex', gap: '0.35rem' }}>
-                        <input 
-                          type="number" 
-                          min="1"
-                          className="form-control"
-                          value={line.quantity}
-                          onChange={(e) => updateLine(idx, 'quantity', e.target.value)}
-                          style={{ height: '34px', fontSize: '12px', width: '60px' }}
-                        />
+              {lines.length === 0 ? (
+                <div style={{
+                  padding: '2.5rem 1.5rem',
+                  textAlign: 'center',
+                  background: 'var(--bg-elevated)',
+                  borderRadius: 'var(--radius-md)',
+                  border: '1px dashed var(--border-subtle)',
+                  color: 'var(--text-muted)'
+                }}>
+                  <p style={{ fontSize: '13px', marginBottom: '0.75rem', fontWeight: 500 }}>
+                    No items added yet. Click <strong>+ Add Line Item</strong> above or choose from your catalog.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={addLine}
+                    className="btn btn-primary"
+                    style={{ padding: '0.45rem 1rem', fontSize: '12px', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
+                  >
+                    <Plus size={14} /> Add First Item
+                  </button>
+                </div>
+              ) : (
+                lines.map((line, idx) => (
+                  <div 
+                    key={idx} 
+                    style={{ 
+                      background: 'var(--bg-elevated)', 
+                      border: '1px solid var(--border-subtle)', 
+                      borderRadius: 'var(--radius-md)', 
+                      padding: '1rem',
+                      position: 'relative'
+                    }}
+                  >
+                    <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr 0.8fr 1fr', gap: '0.75rem', marginBottom: '0.75rem' }}>
+                      <div>
+                        <label className="form-label" style={{ fontSize: '11px' }}>Quick Item Selector</label>
                         <select 
                           className="form-control"
-                          value={line.uom}
-                          onChange={(e) => updateLine(idx, 'uom', e.target.value)}
+                          value={line.itemId}
+                          onChange={(e) => updateLine(idx, 'itemId', e.target.value)}
                           style={{ height: '34px', fontSize: '12px' }}
                         >
-                          <option value="PCS">PCS</option>
-                          <option value="KGS">KGS</option>
-                          <option value="BOX">BOX</option>
-                          <option value="HOURS">HOURS</option>
+                          <option value="">-- Choose from Catalog --</option>
+                          {itemsCatalog.map(item => (
+                            <option key={item.id} value={item.id}>{item.name}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="form-label" style={{ fontSize: '11px' }}>Item Name / Description</label>
+                        <input 
+                          type="text" 
+                          className="form-control"
+                          value={line.itemName}
+                          onChange={(e) => updateLine(idx, 'itemName', e.target.value)}
+                          placeholder="Product name"
+                          style={{ height: '34px', fontSize: '12px' }}
+                        />
+                      </div>
+
+                      <div>
+                        <label className="form-label" style={{ fontSize: '11px' }}>HSN/SAC</label>
+                        <input 
+                          type="text" 
+                          className="form-control"
+                          value={line.hsnSacCode}
+                          onChange={(e) => updateLine(idx, 'hsnSacCode', e.target.value)}
+                          style={{ height: '34px', fontSize: '12px', fontFamily: 'var(--font-mono)' }}
+                        />
+                      </div>
+
+                      <div>
+                        <label className="form-label" style={{ fontSize: '11px' }}>GST Tax Rate</label>
+                        <select 
+                          className="form-control"
+                          value={line.gstRate}
+                          onChange={(e) => updateLine(idx, 'gstRate', parseFloat(e.target.value))}
+                          style={{ height: '34px', fontSize: '12px' }}
+                        >
+                          <option value="0">0% (Exempt)</option>
+                          <option value="5">5% GST</option>
+                          <option value="12">12% GST</option>
+                          <option value="18">18% GST (Standard)</option>
+                          <option value="28">28% GST</option>
                         </select>
                       </div>
                     </div>
 
-                    <div>
-                      <label className="form-label" style={{ fontSize: '11px' }}>Rate (₹)</label>
-                      <input 
-                        type="number" 
-                        step="0.01"
-                        className="form-control"
-                        value={line.unitPrice}
-                        onChange={(e) => updateLine(idx, 'unitPrice', e.target.value)}
-                        style={{ height: '34px', fontSize: '12px' }}
-                      />
-                    </div>
-
-                    <div>
-                      <label className="form-label" style={{ fontSize: '11px' }}>Discount %</label>
-                      <input 
-                        type="number" 
-                        className="form-control"
-                        value={line.discountPercent}
-                        onChange={(e) => updateLine(idx, 'discountPercent', parseFloat(e.target.value) || 0)}
-                        style={{ height: '34px', fontSize: '12px' }}
-                      />
-                    </div>
-
-                    <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
-                        Tax: ₹{isInterState ? line.igstAmount : (line.cgstAmount + line.sgstAmount)}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1.2fr auto', gap: '0.75rem', alignItems: 'flex-end' }}>
+                      <div>
+                        <label className="form-label" style={{ fontSize: '11px' }}>Qty & Unit</label>
+                        <div style={{ display: 'flex', gap: '0.35rem' }}>
+                          <input 
+                            type="number" 
+                            min="1"
+                            className="form-control"
+                            value={line.quantity}
+                            onChange={(e) => updateLine(idx, 'quantity', e.target.value)}
+                            style={{ height: '34px', fontSize: '12px', width: '60px' }}
+                          />
+                          <select 
+                            className="form-control"
+                            value={line.uom}
+                            onChange={(e) => updateLine(idx, 'uom', e.target.value)}
+                            style={{ height: '34px', fontSize: '12px' }}
+                          >
+                            <option value="PCS">PCS</option>
+                            <option value="KGS">KGS</option>
+                            <option value="BOX">BOX</option>
+                            <option value="HOURS">HOURS</option>
+                          </select>
+                        </div>
                       </div>
-                      <div style={{ fontSize: '14px', fontWeight: 700, color: '#10b981' }}>
-                        ₹{line.totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                      </div>
-                    </div>
 
-                    {lines.length > 1 && (
+                      <div>
+                        <label className="form-label" style={{ fontSize: '11px' }}>Rate (₹)</label>
+                        <input 
+                          type="number" 
+                          step="0.01"
+                          className="form-control"
+                          value={line.unitPrice}
+                          onChange={(e) => updateLine(idx, 'unitPrice', e.target.value)}
+                          style={{ height: '34px', fontSize: '12px' }}
+                        />
+                      </div>
+
+                      <div>
+                        <label className="form-label" style={{ fontSize: '11px' }}>Discount %</label>
+                        <input 
+                          type="number" 
+                          className="form-control"
+                          value={line.discountPercent}
+                          onChange={(e) => updateLine(idx, 'discountPercent', parseFloat(e.target.value) || 0)}
+                          style={{ height: '34px', fontSize: '12px' }}
+                        />
+                      </div>
+
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
+                          Tax: ₹{isInterState ? line.igstAmount : (line.cgstAmount + line.sgstAmount)}
+                        </div>
+                        <div style={{ fontSize: '14px', fontWeight: 700, color: '#10b981' }}>
+                          ₹{line.totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                        </div>
+                      </div>
+
                       <button 
                         onClick={() => deleteLine(idx)} 
                         className="btn btn-outline" 
@@ -532,10 +543,10 @@ export default function CreateInvoicePage({ company, onBack, onInvoiceSaved }) {
                       >
                         <Trash2 size={16} />
                       </button>
-                    )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </div>
 

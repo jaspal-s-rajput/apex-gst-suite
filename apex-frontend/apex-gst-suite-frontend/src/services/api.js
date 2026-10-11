@@ -6,13 +6,38 @@
 
 const API_BASE_URL = 'http://localhost:8080/api/v1';
 
-// Base default store requested by user
-export const BASE_SEED_USER = {
-  email: 'rajputjaspalsingh@gmail.com',
-  password: 'Jaspal@123',
-  storeName: 'Premium Electronics',
-  fullName: 'Jaspal Singh Rajput',
-  phone: '+91 98765 43210'
+// Demo presentation persona requested for landing platform overview
+export const DEMO_STORE_USER = {
+  email: 'apexgstsuite@support.org',
+  password: 'DemoPass@123',
+  storeName: 'Apex Store Pvt Ltd (preview)',
+  fullName: 'store owner',
+  phone: '000000000',
+  role: 'ADMIN',
+  isPreview: true
+};
+
+export const DEMO_STORE_COMPANY = {
+  id: 'c-demo-preview-01',
+  legalName: 'Apex Store Pvt Ltd (preview)',
+  tradeName: 'Apex Store Pvt Ltd (preview)',
+  gstin: '00APEXX0000G0ST',
+  pan: 'APEXX0000G',
+  stateCode: '00',
+  stateName: 'Other Territory / Preview',
+  addressLine1: 'Preview Store Operations Hub, Apex Cloud Platform',
+  city: 'National Hub',
+  pincode: '000000',
+  phone: '000000000',
+  email: 'apexgstsuite@support.org',
+  upiId: 'apexpreview@upi',
+  bankName: 'Preview Reserve Bank',
+  accountNumber: '00000000000000',
+  ifscCode: 'APEX0000000',
+  branchName: 'Headquarters Hub',
+  invoicePrefix: 'PREV/26-27',
+  nextInvoiceSequence: 101,
+  isPreview: true
 };
 
 export const GST_STATES = [
@@ -56,25 +81,26 @@ export const GST_STATES = [
 ];
 
 const MOCK_COMPANY = {
-  id: 'c1111111-1111-1111-1111-111111111111',
-  legalName: 'Premium Electronics Retail Pvt Ltd',
-  tradeName: 'Premium Electronics',
-  gstin: '27AAPFU0939F1ZV',
-  pan: 'AAPFU0939F',
-  stateCode: '27',
-  stateName: 'Maharashtra',
-  addressLine1: 'Shop 101, Mega Electronics Mall, LBS Marg, Ghatkopar West',
-  city: 'Mumbai',
-  pincode: '400086',
-  phone: '+91 98765 43210',
-  email: 'rajputjaspalsingh@gmail.com',
-  upiId: 'premiumelectronics@upi',
-  bankName: 'HDFC Bank',
-  accountNumber: '50200012345678',
-  ifscCode: 'HDFC0001234',
-  branchName: 'Ghatkopar West Branch',
-  invoicePrefix: 'PREM/26-27',
-  nextInvoiceSequence: 101
+  id: 'c-preview-demo',
+  legalName: 'Apex Store Pvt Ltd (preview)',
+  tradeName: 'Apex Store Pvt Ltd (preview)',
+  gstin: '00APEXX0000G0ST',
+  pan: 'APEXX0000G',
+  stateCode: '00',
+  stateName: 'Other Territory / Preview',
+  addressLine1: 'Preview Store Operations Hub, Apex Cloud Platform',
+  city: 'National Hub',
+  pincode: '000000',
+  phone: '000000000',
+  email: 'apexgstsuite@support.org',
+  upiId: 'apexpreview@upi',
+  bankName: 'Preview Reserve Bank',
+  accountNumber: '00000000000000',
+  ifscCode: 'APEX0000000',
+  branchName: 'Headquarters Hub',
+  invoicePrefix: 'PREV/26-27',
+  nextInvoiceSequence: 101,
+  isPreview: true
 };
 
 const MOCK_PARTIES = [
@@ -257,99 +283,300 @@ const MOCK_INVOICES = [
 export const api = {
   // Company
   async getCompany() {
+    const store = this.getActiveStore();
+    if (store) return store;
     try {
       const res = await fetch(`${API_BASE_URL}/companies/current`);
       if (res.ok) return await res.json();
-    } catch (_) {}
+    } catch (_) { }
     return MOCK_COMPANY;
+  },
+
+  async updateCompany(companyData) {
+    const store = this.getActiveStore();
+    const updatedStore = { ...(store || {}), ...companyData };
+
+    // Attempt backend update
+    try {
+      const res = await fetch(`${API_BASE_URL}/companies`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatedStore)
+      });
+      if (res.ok) {
+        const saved = await res.json();
+        this.syncSessionStore(saved);
+        return saved;
+      }
+    } catch (_) { }
+
+    // Fallback sync session & local users registry
+    this.syncSessionStore(updatedStore);
+    return updatedStore;
+  },
+
+  syncSessionStore(updatedStore) {
+    const sessionStr = localStorage.getItem('apex_auth_session') || sessionStorage.getItem('apex_auth_session');
+    if (sessionStr) {
+      try {
+        const session = JSON.parse(sessionStr);
+        session.store = updatedStore;
+        if (localStorage.getItem('apex_auth_session')) {
+          localStorage.setItem('apex_auth_session', JSON.stringify(session));
+        } else {
+          sessionStorage.setItem('apex_auth_session', JSON.stringify(session));
+        }
+
+        // Also sync user in local users list
+        const localUsers = JSON.parse(localStorage.getItem('apex_local_users') || '[]');
+        const updatedUsers = localUsers.map(u => {
+          if (u.id === session.user?.id || u.email?.toLowerCase() === session.user?.email?.toLowerCase()) {
+            return { ...u, store: updatedStore };
+          }
+          return u;
+        });
+        localStorage.setItem('apex_local_users', JSON.stringify(updatedUsers));
+      } catch (_) { }
+    }
+  },
+
+  async updateCurrentUser(userData) {
+    const sessionStr = localStorage.getItem('apex_auth_session') || sessionStorage.getItem('apex_auth_session');
+    let session = sessionStr ? JSON.parse(sessionStr) : null;
+    if (!session) return userData;
+
+    const updatedUser = { ...session.user, ...userData };
+    session.user = updatedUser;
+
+    if (localStorage.getItem('apex_auth_session')) {
+      localStorage.setItem('apex_auth_session', JSON.stringify(session));
+    } else {
+      sessionStorage.setItem('apex_auth_session', JSON.stringify(session));
+    }
+
+    // Update in local users registry
+    const localUsers = JSON.parse(localStorage.getItem('apex_local_users') || '[]');
+    const updatedUsers = localUsers.map(u => {
+      if (u.id === updatedUser.id || u.email?.toLowerCase() === updatedUser.email?.toLowerCase()) {
+        return {
+          ...u,
+          fullName: updatedUser.fullName,
+          phone: updatedUser.phone,
+          email: updatedUser.email,
+          ...(userData.newPassword ? { password: userData.newPassword } : {})
+        };
+      }
+      return u;
+    });
+    localStorage.setItem('apex_local_users', JSON.stringify(updatedUsers));
+
+    return updatedUser;
+  },
+
+  // Store helper to scope data per registered store
+  getActiveStore() {
+    try {
+      const saved = localStorage.getItem('apex_auth_session') || sessionStorage.getItem('apex_auth_session');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed?.store) return parsed.store;
+      }
+    } catch (_) { }
+    return null;
+  },
+
+  getActiveStoreId() {
+    const store = this.getActiveStore();
+    return store?.id || null;
   },
 
   // Parties (Customers & Vendors)
   async getParties(search = '') {
+    const store = this.getActiveStore();
+    const companyId = store?.id;
     try {
-      const url = search ? `${API_BASE_URL}/parties?search=${encodeURIComponent(search)}` : `${API_BASE_URL}/parties`;
+      let url = `${API_BASE_URL}/parties`;
+      const params = new URLSearchParams();
+      if (companyId) params.append('companyId', companyId);
+      if (search) params.append('search', search);
+      const queryStr = params.toString();
+      if (queryStr) url += `?${queryStr}`;
+
       const res = await fetch(url);
       if (res.ok) return await res.json();
-    } catch (_) {}
-    return MOCK_PARTIES.filter(p => !search || p.name.toLowerCase().includes(search.toLowerCase()));
+    } catch (_) { }
+
+    // Offline / Client store isolation fallback:
+    // Only return mock parties if store is the static preview presentation
+    const isPreview = Boolean(store?.isPreview);
+    const storePartiesKey = companyId ? `apex_parties_${companyId}` : null;
+    let localStoreParties = [];
+    if (storePartiesKey) {
+      localStoreParties = JSON.parse(localStorage.getItem(storePartiesKey) || '[]');
+    }
+
+    const source = (localStoreParties.length > 0 || !isPreview)
+      ? localStoreParties
+      : MOCK_PARTIES;
+
+    return source.filter(p => !search || p.name.toLowerCase().includes(search.toLowerCase()));
   },
 
   async createParty(party) {
+    const store = this.getActiveStore();
+    const companyId = store?.id;
     try {
-      const res = await fetch(`${API_BASE_URL}/parties`, {
+      const url = companyId ? `${API_BASE_URL}/parties?companyId=${encodeURIComponent(companyId)}` : `${API_BASE_URL}/parties`;
+      const res = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(party)
       });
       if (res.ok) return await res.json();
-    } catch (_) {}
+    } catch (_) { }
+
     const newParty = { ...party, id: 'p-' + Date.now(), currentBalance: 0 };
-    MOCK_PARTIES.push(newParty);
+    if (companyId) {
+      const storePartiesKey = `apex_parties_${companyId}`;
+      const existing = JSON.parse(localStorage.getItem(storePartiesKey) || '[]');
+      existing.push(newParty);
+      localStorage.setItem(storePartiesKey, JSON.stringify(existing));
+    } else {
+      MOCK_PARTIES.push(newParty);
+    }
     return newParty;
   },
 
   // Items & Inventory
   async getItems(search = '') {
+    const store = this.getActiveStore();
+    const companyId = store?.id;
     try {
-      const url = search ? `${API_BASE_URL}/items?search=${encodeURIComponent(search)}` : `${API_BASE_URL}/items`;
+      let url = `${API_BASE_URL}/items`;
+      const params = new URLSearchParams();
+      if (companyId) params.append('companyId', companyId);
+      if (search) params.append('search', search);
+      const queryStr = params.toString();
+      if (queryStr) url += `?${queryStr}`;
+
       const res = await fetch(url);
       if (res.ok) return await res.json();
-    } catch (_) {}
-    return MOCK_ITEMS.filter(i => !search || i.name.toLowerCase().includes(search.toLowerCase()) || i.barcode === search);
+    } catch (_) { }
+
+    // Only return mock items for static preview; all user stores start 100% empty
+    const isPreview = Boolean(store?.isPreview);
+    const storeItemsKey = companyId ? `apex_items_${companyId}` : null;
+    let localStoreItems = [];
+    if (storeItemsKey) {
+      localStoreItems = JSON.parse(localStorage.getItem(storeItemsKey) || '[]');
+    }
+
+    const source = (localStoreItems.length > 0 || !isPreview)
+      ? localStoreItems
+      : MOCK_ITEMS;
+
+    return source.filter(i => !search || i.name.toLowerCase().includes(search.toLowerCase()) || i.barcode === search);
   },
 
   async getItemByBarcode(barcode) {
+    const store = this.getActiveStore();
+    const companyId = store?.id;
     try {
-      const res = await fetch(`${API_BASE_URL}/items/barcode/${barcode}`);
+      const url = companyId
+        ? `${API_BASE_URL}/items/barcode/${barcode}?companyId=${encodeURIComponent(companyId)}`
+        : `${API_BASE_URL}/items/barcode/${barcode}`;
+      const res = await fetch(url);
       if (res.ok) return await res.json();
-    } catch (_) {}
-    return MOCK_ITEMS.find(i => i.barcode === barcode) || null;
+    } catch (_) { }
+
+    const items = await this.getItems();
+    return items.find(i => i.barcode === barcode) || null;
   },
 
   async createItem(item) {
+    const store = this.getActiveStore();
+    const companyId = store?.id;
     try {
-      const res = await fetch(`${API_BASE_URL}/items`, {
+      const url = companyId ? `${API_BASE_URL}/items?companyId=${encodeURIComponent(companyId)}` : `${API_BASE_URL}/items`;
+      const res = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(item)
       });
       if (res.ok) return await res.json();
-    } catch (_) {}
+    } catch (_) { }
+
     const newItem = { ...item, id: 'i-' + Date.now() };
-    MOCK_ITEMS.push(newItem);
+    if (companyId) {
+      const storeItemsKey = `apex_items_${companyId}`;
+      const existing = JSON.parse(localStorage.getItem(storeItemsKey) || '[]');
+      existing.push(newItem);
+      localStorage.setItem(storeItemsKey, JSON.stringify(existing));
+    } else {
+      MOCK_ITEMS.push(newItem);
+    }
     return newItem;
   },
 
   // Invoices
   async getInvoices() {
+    const store = this.getActiveStore();
+    const companyId = store?.id;
     try {
-      const res = await fetch(`${API_BASE_URL}/invoices`);
+      const url = companyId ? `${API_BASE_URL}/invoices?companyId=${encodeURIComponent(companyId)}` : `${API_BASE_URL}/invoices`;
+      const res = await fetch(url);
       if (res.ok) return await res.json();
-    } catch (_) {}
-    return MOCK_INVOICES;
+    } catch (_) { }
+
+    // Only return mock invoices for static preview; all user stores start 100% empty
+    const isPreview = Boolean(store?.isPreview);
+    const storeInvoicesKey = companyId ? `apex_invoices_${companyId}` : null;
+    let localStoreInvoices = [];
+    if (storeInvoicesKey) {
+      localStoreInvoices = JSON.parse(localStorage.getItem(storeInvoicesKey) || '[]');
+    }
+
+    return (localStoreInvoices.length > 0 || !isPreview)
+      ? localStoreInvoices
+      : MOCK_INVOICES;
   },
 
   async createInvoice(invoiceData) {
+    const store = this.getActiveStore();
+    const companyId = store?.id;
     try {
+      const payload = companyId ? { ...invoiceData, companyId } : invoiceData;
       const res = await fetch(`${API_BASE_URL}/invoices`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(invoiceData)
+        body: JSON.stringify(payload)
       });
       if (res.ok) return await res.json();
-    } catch (_) {}
+    } catch (_) { }
 
-    // Fallback client simulation
-    const seq = MOCK_COMPANY.nextInvoiceSequence++;
-    const invNum = `${MOCK_COMPANY.invoicePrefix}/${String(seq).padStart(4, '0')}`;
+    // Fallback client simulation per store
+    const prefix = store?.invoicePrefix || MOCK_COMPANY.invoicePrefix || 'INV/26-27';
+    const nextSeq = (store?.nextInvoiceSequence || 101);
+    if (store) store.nextInvoiceSequence = nextSeq + 1;
+
+    const invNum = `${prefix}/${String(nextSeq).padStart(4, '0')}`;
+    const parties = await this.getParties();
     const newInvoice = {
       id: 'inv-' + Date.now(),
       invoiceNumber: invNum,
       ...invoiceData,
-      party: MOCK_PARTIES.find(p => p.id === invoiceData.partyId) || { name: 'Customer' },
+      party: parties.find(p => p.id === invoiceData.partyId) || { name: 'Customer' },
       createdAt: new Date().toISOString()
     };
-    MOCK_INVOICES.unshift(newInvoice);
+
+    if (companyId) {
+      const storeInvoicesKey = `apex_invoices_${companyId}`;
+      const existing = JSON.parse(localStorage.getItem(storeInvoicesKey) || '[]');
+      existing.unshift(newInvoice);
+      localStorage.setItem(storeInvoicesKey, JSON.stringify(existing));
+    } else {
+      MOCK_INVOICES.unshift(newInvoice);
+    }
     return newInvoice;
   },
 
@@ -358,7 +585,7 @@ export const api = {
     try {
       const res = await fetch(`${API_BASE_URL}/gst/verify/${gstin}`);
       if (res.ok) return await res.json();
-    } catch (_) {}
+    } catch (_) { }
 
     // Fallback regex & checksum
     const clean = (gstin || '').trim().toUpperCase();
@@ -376,16 +603,23 @@ export const api = {
 
   // Reports & Dashboard
   async getDashboardMetrics() {
+    const store = this.getActiveStore();
+    const companyId = store?.id;
     try {
-      const res = await fetch(`${API_BASE_URL}/reports/dashboard`);
+      const url = companyId ? `${API_BASE_URL}/reports/dashboard?companyId=${encodeURIComponent(companyId)}` : `${API_BASE_URL}/reports/dashboard`;
+      const res = await fetch(url);
       if (res.ok) return await res.json();
-    } catch (_) {}
+    } catch (_) { }
 
-    const totalSales = MOCK_INVOICES.reduce((sum, inv) => sum + (inv.grandTotal || 0), 0);
-    const cgst = MOCK_INVOICES.reduce((sum, inv) => sum + (inv.cgstAmount || 0), 0);
-    const sgst = MOCK_INVOICES.reduce((sum, inv) => sum + (inv.sgstAmount || 0), 0);
-    const igst = MOCK_INVOICES.reduce((sum, inv) => sum + (inv.igstAmount || 0), 0);
-    const totalRec = MOCK_INVOICES.reduce((sum, inv) => sum + (inv.balanceAmount || 0), 0);
+    const invoices = await this.getInvoices();
+    const items = await this.getItems();
+
+    const totalSales = invoices.reduce((sum, inv) => sum + (inv.grandTotal || 0), 0);
+    const cgst = invoices.reduce((sum, inv) => sum + (inv.cgstAmount || 0), 0);
+    const sgst = invoices.reduce((sum, inv) => sum + (inv.sgstAmount || 0), 0);
+    const igst = invoices.reduce((sum, inv) => sum + (inv.igstAmount || 0), 0);
+    const totalRec = invoices.reduce((sum, inv) => sum + (inv.balanceAmount || 0), 0);
+    const isPreview = Boolean(store?.isPreview);
 
     return {
       totalSales: totalSales,
@@ -394,12 +628,12 @@ export const api = {
       cgstCollected: cgst,
       sgstCollected: sgst,
       igstCollected: igst,
-      totalItcAvailable: 124500.00,
-      netTaxPayable: Math.max(0, (cgst + sgst + igst) - 124500.00),
+      totalItcAvailable: isPreview ? 124500.00 : 0.00,
+      netTaxPayable: isPreview ? Math.max(0, (cgst + sgst + igst) - 124500.00) : (cgst + sgst + igst),
       totalReceivables: totalRec,
-      totalPayables: 45000.00,
-      totalInvoicesCount: MOCK_INVOICES.length,
-      lowStockCount: MOCK_ITEMS.filter(i => i.currentStock <= i.minStockAlert).length
+      totalPayables: isPreview ? 45000.00 : 0.00,
+      totalInvoicesCount: invoices.length,
+      lowStockCount: items.filter(i => i.currentStock <= i.minStockAlert).length
     };
   },
 
@@ -422,19 +656,9 @@ export const api = {
         if (!e.message.includes('fetch')) throw e;
       }
 
-      // Offline/demo fallback matching base store user or local registered stores
+      // Real registered user accounts only:
       const localUsers = JSON.parse(localStorage.getItem('apex_local_users') || '[]');
-      const allUsers = [
-        {
-          email: BASE_SEED_USER.email,
-          password: BASE_SEED_USER.password,
-          fullName: BASE_SEED_USER.fullName,
-          phone: BASE_SEED_USER.phone,
-          store: MOCK_COMPANY,
-          role: 'ADMIN'
-        },
-        ...localUsers
-      ];
+      const allUsers = [...localUsers];
 
       const cleanEmail = (email || '').trim().toLowerCase();
       const match = allUsers.find(u => u.email.toLowerCase() === cleanEmail);

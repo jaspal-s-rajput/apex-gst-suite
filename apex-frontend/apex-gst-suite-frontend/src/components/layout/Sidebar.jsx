@@ -1,15 +1,15 @@
-import React from 'react';
-import { 
-  LayoutDashboard, 
-  FileText, 
-  PlusCircle, 
-  ShoppingCart, 
-  Package, 
-  Users, 
-  BarChart3, 
+import {
+  LayoutDashboard,
+  FileText,
+  PlusCircle,
+  ShoppingCart,
+  Package,
+  Users,
+  BarChart3,
   Settings,
   ShieldCheck
 } from 'lucide-react';
+import apexLogo from '../../assets/ApexLogo/ApexLogoWhite.png';
 
 export default function Sidebar({ activeTab, setActiveTab, company }) {
   const navItems = [
@@ -26,9 +26,13 @@ export default function Sidebar({ activeTab, setActiveTab, company }) {
   return (
     <aside className="sidebar no-print">
       <div className="sidebar-header">
-        <div className="brand-badge">A</div>
+        <div className="brand-badge" style={{ padding: '6px' }}>
+          <img src={apexLogo} alt="Apex Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+        </div>
         <div>
-          <div className="brand-text">Apex GST</div>
+          <div className="brand-text">
+            Apex GST <span style={{ color: '#38bdf8' }}>Suite</span>
+          </div>
           <div style={{ fontSize: '11px', color: '#38bdf8', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '140px' }}>
             {company?.tradeName || 'Premium Electronics'}
           </div>
@@ -43,15 +47,7 @@ export default function Sidebar({ activeTab, setActiveTab, company }) {
             <button
               key={item.id}
               onClick={() => setActiveTab(item.id)}
-              className={`nav-link ${isActive ? 'active' : ''}`}
-              style={{
-                border: 'none',
-                width: '100%',
-                textAlign: 'left',
-                ...(item.isHighlight && !isActive
-                  ? { color: '#10b981', background: 'rgba(16, 185, 129, 0.08)' }
-                  : {})
-              }}
+              className={`nav-link ${isActive ? 'active' : ''} ${item.isHighlight && !isActive ? 'highlight' : ''}`}
             >
               <Icon size={18} />
               <span>{item.label}</span>

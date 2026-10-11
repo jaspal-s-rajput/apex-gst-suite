@@ -11,7 +11,7 @@ import GSTReportsPage from './pages/GSTReportsPage';
 import SettingsPage from './pages/SettingsPage';
 import AuthPage from './pages/AuthPage';
 import LandingPage from './pages/LandingPage';
-import { api, BASE_SEED_USER } from './services/api';
+import { api, DEMO_STORE_USER, DEMO_STORE_COMPANY } from './services/api';
 import './index.css';
 
 export default function App() {
@@ -29,15 +29,26 @@ export default function App() {
   }, [theme]);
 
   useEffect(() => {
+    // Clean slate: ensure all legacy users and sessions are completely purged
+    try {
+      // Remove any previously stored mock users
+      localStorage.removeItem('apex_local_users');
+    } catch (_) {}
+
     // Check saved session in local/session storage
     const saved = localStorage.getItem('apex_auth_session') || sessionStorage.getItem('apex_auth_session');
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (parsed?.user && parsed?.store) {
+        // Only restore actual real user sessions, never preview sessions
+        if (parsed?.user && parsed?.store && !parsed?.user?.isPreview && !parsed?.store?.isPreview) {
           setCurrentUser(parsed.user);
           setCompany(parsed.store);
           setView('workspace');
+        } else {
+          // Clear any leftover preview session or invalid session
+          localStorage.removeItem('apex_auth_session');
+          sessionStorage.removeItem('apex_auth_session');
         }
       } catch (_) {}
     }
@@ -51,16 +62,37 @@ export default function App() {
 
   const handleLaunchDemoStore = async () => {
     try {
-      const result = await api.login(BASE_SEED_USER.email, BASE_SEED_USER.password);
-      localStorage.setItem('apex_auth_session', JSON.stringify(result));
-      setCurrentUser(result.user);
-      setCompany(result.store);
+      const demoResult = {
+        token: 'apex-demo-jwt-' + Date.now(),
+        user: {
+          id: 'u-demo-preview-owner',
+          email: DEMO_STORE_USER.email,
+          fullName: DEMO_STORE_USER.fullName,
+          phone: DEMO_STORE_USER.phone,
+          role: 'ADMIN',
+          isPreview: true
+        },
+        store: DEMO_STORE_COMPANY,
+        message: 'Preview workspace initialized'
+      };
+      // Do NOT persist preview session in localStorage/sessionStorage
+      // Only keep in transient memory for this view
+      setCurrentUser(demoResult.user);
+      setCompany(demoResult.store);
       setView('workspace');
       setActiveTab('dashboard');
     } catch (_) {
-      // Fallback
       handleNavigateToAuth('login');
     }
+  };
+
+  const handleReturnToLanding = () => {
+    // If current session is preview, clean up transient preview state
+    if (currentUser?.isPreview || company?.isPreview) {
+      setCurrentUser(null);
+      setCompany(null);
+    }
+    setView('landing');
   };
 
   const handleAuthSuccess = (authData) => {
@@ -84,14 +116,22 @@ export default function App() {
 
   const handleUpdateCompany = (updated) => {
     setCompany(updated);
-    const saved = localStorage.getItem('apex_auth_session');
+    const saved = localStorage.getItem('apex_auth_session') || sessionStorage.getItem('apex_auth_session');
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
         parsed.store = updated;
-        localStorage.setItem('apex_auth_session', JSON.stringify(parsed));
+        if (localStorage.getItem('apex_auth_session')) {
+          localStorage.setItem('apex_auth_session', JSON.stringify(parsed));
+        } else {
+          sessionStorage.setItem('apex_auth_session', JSON.stringify(parsed));
+        }
       } catch (_) {}
     }
+  };
+
+  const handleUpdateUser = (updatedUser) => {
+    setCurrentUser(updatedUser);
   };
 
   if (!authInitialized) {
@@ -137,7 +177,7 @@ export default function App() {
           company={company}
           currentUser={currentUser}
           onLogout={handleLogout}
-          onViewOrg={() => setView('landing')}
+          onViewOrg={handleReturnToLanding}
           onNewInvoice={() => setActiveTab('create-invoice')}
           theme={theme}
           toggleTheme={toggleTheme}
@@ -185,7 +225,9 @@ export default function App() {
         {activeTab === 'settings' && (
           <SettingsPage
             company={company}
+            currentUser={currentUser}
             onUpdateCompany={handleUpdateCompany}
+            onUpdateUser={handleUpdateUser}
           />
         )}
       </div>

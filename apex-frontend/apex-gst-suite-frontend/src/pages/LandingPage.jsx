@@ -26,7 +26,7 @@ import {
   Printer,
   Users
 } from 'lucide-react';
-import { BASE_SEED_USER } from '../services/api';
+import apexLogo from '../assets/ApexLogo/ApexLogoWhite.png';
 
 export default function LandingPage({
   onNavigateToAuth,
@@ -90,12 +90,14 @@ export default function LandingPage({
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              fontWeight: 800,
-              color: '#ffffff',
-              fontSize: '18px',
-              boxShadow: '0 4px 16px rgba(16, 185, 129, 0.35)'
+              boxShadow: '0 4px 16px rgba(16, 185, 129, 0.35)',
+              padding: '6px'
             }}>
-              A
+              <img
+                src={apexLogo}
+                alt="Apex Logo"
+                style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+              />
             </div>
             <div>
               <span style={{ fontSize: '17px', fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--text-primary)' }}>
@@ -193,7 +195,7 @@ export default function LandingPage({
             {theme === 'dark' ? <Sun size={16} color="#fbbf24" /> : <Moon size={16} color="#3b82f6" />}
           </button>
 
-          {currentUser ? (
+          {currentUser && !currentUser.isPreview ? (
             <button
               onClick={onReturnToWorkspace}
               className="btn btn-blue"
@@ -313,7 +315,7 @@ export default function LandingPage({
               }}
             >
               <Zap size={18} />
-              <span>1-Click Demo (Premium Electronics)</span>
+              <span>Explore Apex Suite Live Preview</span>
             </button>
 
             <button
@@ -441,10 +443,10 @@ export default function LandingPage({
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '0.75rem' }}>
                     <div>
                       <div style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-primary)' }}>
-                        Counter #1 • Supermarket Express Checkout
+                        Counter #1 • Apex Store Pvt Ltd (preview) (Cashier: store owner)
                       </div>
                       <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                        USB Barcode Scanner Active • Thermal Slip Mode
+                        Operator: apexgstsuite@support.org • Barcode Scanner Active • Thermal Slip Mode
                       </div>
                     </div>
                     <span className="badge badge-success">● Cash Drawer Ready</span>
@@ -464,18 +466,25 @@ export default function LandingPage({
                         </thead>
                         <tbody>
                           <tr style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-                            <td style={{ padding: '8px 0', fontWeight: 600 }}>Ergonomic Laptop Stand (Aluminium)</td>
+                            <td style={{ padding: '8px 0', fontWeight: 600 }}>Sony Bravia 55" 4K UHD Smart Google TV</td>
                             <td style={{ padding: '8px 0', textAlign: 'center' }}>1</td>
-                            <td style={{ padding: '8px 0', textAlign: 'right' }}>₹1,499.00</td>
+                            <td style={{ padding: '8px 0', textAlign: 'right' }}>₹42,990.00</td>
                             <td style={{ padding: '8px 0', textAlign: 'right', color: '#10b981' }}>18%</td>
-                            <td style={{ padding: '8px 0', textAlign: 'right', fontWeight: 700 }}>₹1,768.82</td>
+                            <td style={{ padding: '8px 0', textAlign: 'right', fontWeight: 700 }}>₹50,728.20</td>
                           </tr>
                           <tr style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-                            <td style={{ padding: '8px 0', fontWeight: 600 }}>Wireless Optical Mouse 2.4GHz</td>
-                            <td style={{ padding: '8px 0', textAlign: 'center' }}>2</td>
-                            <td style={{ padding: '8px 0', textAlign: 'right' }}>₹699.00</td>
+                            <td style={{ padding: '8px 0', fontWeight: 600 }}>Bose QuietComfort Noise-Cancelling Headphones Pro</td>
+                            <td style={{ padding: '8px 0', textAlign: 'center' }}>1</td>
+                            <td style={{ padding: '8px 0', textAlign: 'right' }}>₹18,990.00</td>
                             <td style={{ padding: '8px 0', textAlign: 'right', color: '#10b981' }}>18%</td>
-                            <td style={{ padding: '8px 0', textAlign: 'right', fontWeight: 700 }}>₹1,649.64</td>
+                            <td style={{ padding: '8px 0', textAlign: 'right', fontWeight: 700 }}>₹22,408.20</td>
+                          </tr>
+                          <tr style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                            <td style={{ padding: '8px 0', fontWeight: 600 }}>Anker 65W GaN Fast Dual-Port USB-C Charger</td>
+                            <td style={{ padding: '8px 0', textAlign: 'center' }}>2</td>
+                            <td style={{ padding: '8px 0', textAlign: 'right' }}>₹1,999.00</td>
+                            <td style={{ padding: '8px 0', textAlign: 'right', color: '#10b981' }}>18%</td>
+                            <td style={{ padding: '8px 0', textAlign: 'right', fontWeight: 700 }}>₹4,717.64</td>
                           </tr>
                         </tbody>
                       </table>
@@ -485,10 +494,10 @@ export default function LandingPage({
                       <div>
                         <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>PAYABLE AMOUNT</div>
                         <div style={{ fontSize: '28px', fontWeight: 800, color: '#34d399', fontFamily: 'var(--font-heading)' }}>
-                          ₹3,418.00
+                          ₹77,854.00
                         </div>
                         <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
-                          CGST (9%): ₹260.70 • SGST (9%): ₹260.70
+                          CGST (9%): ₹5,937.97 • SGST (9%): ₹5,937.97
                         </div>
                       </div>
 
@@ -510,10 +519,10 @@ export default function LandingPage({
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '0.75rem' }}>
                     <div>
                       <div style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-primary)' }}>
-                        Tax Invoice PREM/26-27/101 • Premium Electronics
+                        Tax Invoice PREV/26-27/0101 • Apex Store Pvt Ltd (preview)
                       </div>
                       <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                        B2B Tax Invoice • Customer: Reliance Retail Ltd (27AAACR5055K1ZK)
+                        B2B Tax Invoice • Customer: CBI Forensic Labs & Tech Corp (27AAACR5055K1ZK)
                       </div>
                     </div>
                     <span className="badge badge-blue">Intra-State (CGST + SGST)</span>
@@ -523,18 +532,18 @@ export default function LandingPage({
                     <div style={{ background: 'var(--bg-elevated)', padding: '0.85rem', borderRadius: 'var(--radius-sm)' }}>
                       <strong style={{ color: 'var(--text-primary)' }}>Supplier Details:</strong>
                       <p style={{ margin: '4px 0 0 0', color: 'var(--text-muted)' }}>
-                        Premium Electronics Retail Pvt Ltd<br />
-                        GSTIN: 27AAPFU0939F1ZV<br />
-                        Mumbai, Maharashtra - 400086
+                        Apex Store Pvt Ltd (preview) (Admin: store owner)<br />
+                        GSTIN: 00APEXX0000G0ST • Email: apexgstsuite@support.org<br />
+                        Preview Store Operations Hub, Apex Cloud Platform
                       </p>
                     </div>
 
                     <div style={{ background: 'var(--bg-elevated)', padding: '0.85rem', borderRadius: 'var(--radius-sm)' }}>
                       <strong style={{ color: 'var(--text-primary)' }}>Customer Details:</strong>
                       <p style={{ margin: '4px 0 0 0', color: 'var(--text-muted)' }}>
-                        Reliance Retail Ltd<br />
+                        CBI Forensic Labs & Tech Corp<br />
                         GSTIN: 27AAACR5055K1ZK<br />
-                        Marine Lines, Mumbai - 400002
+                        Nariman Point, Marine Drive, Mumbai - 400021
                       </p>
                     </div>
 
@@ -542,7 +551,7 @@ export default function LandingPage({
                       <QrCode size={38} color="#10b981" />
                       <div>
                         <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>Dynamic NPCI UPI QR</div>
-                        <div style={{ color: 'var(--text-muted)', fontSize: '11px' }}>Direct bank settlement</div>
+                        <div style={{ color: 'var(--text-muted)', fontSize: '11px' }}>UPI: apexpreview@upi • Direct settlement</div>
                       </div>
                     </div>
                   </div>
@@ -554,10 +563,10 @@ export default function LandingPage({
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '0.75rem' }}>
                     <div>
                       <div style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-primary)' }}>
-                        GSTR-1 & GSTR-3B Tax Filing Radar (October 2026)
+                        GSTR-1 & GSTR-3B Tax Filing Radar (October 2026) • Apex Store Pvt Ltd (preview)
                       </div>
                       <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                        Automated B2B Tables (4A, 4B) • B2C Small (7) • HSN Summary (12)
+                        Automated B2B Tables (4A, 4B) • B2C Small (7) • HSN Summary (12) • Admin: store owner
                       </div>
                     </div>
                     <span className="badge badge-success">✓ 100% Reconciled</span>
@@ -589,10 +598,10 @@ export default function LandingPage({
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '0.75rem' }}>
                     <div>
                       <div style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-primary)' }}>
-                        Warehouse Inventory & Real-Time Stock Ledger
+                        Warehouse Inventory & Real-Time Stock Ledger • Apex Store Pvt Ltd (preview)
                       </div>
                       <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                        Low Stock Radar • FIFO Costing • Barcode Automation
+                        Low Stock Radar • FIFO Costing • Barcode Automation • Admin: store owner
                       </div>
                     </div>
                     <span className="badge badge-warning">2 Items Below Reorder Level</span>
@@ -600,29 +609,29 @@ export default function LandingPage({
 
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
                     <div style={{ background: 'var(--bg-elevated)', padding: '1rem', borderRadius: 'var(--radius-sm)' }}>
-                      <div style={{ fontSize: '13px', fontWeight: 600 }}>Aluminium Laptop Stand</div>
-                      <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>SKU: LAP-STD-01 • HSN: 8473</div>
+                      <div style={{ fontSize: '13px', fontWeight: 600 }}>Sony Bravia 55" 4K Smart TV</div>
+                      <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>SKU: SONY-TV-55 • HSN: 8528</div>
                       <div style={{ marginTop: '0.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ fontSize: '18px', fontWeight: 700, color: '#34d399' }}>45 PCS in stock</span>
-                        <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Threshold: 10</span>
+                        <span style={{ fontSize: '18px', fontWeight: 700, color: '#34d399' }}>17 PCS in stock</span>
+                        <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Threshold: 5</span>
                       </div>
                     </div>
 
                     <div style={{ background: 'var(--bg-elevated)', padding: '1rem', borderRadius: 'var(--radius-sm)' }}>
-                      <div style={{ fontSize: '13px', fontWeight: 600 }}>Wireless Optical Mouse</div>
-                      <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>SKU: MOU-WL-02 • HSN: 8471</div>
+                      <div style={{ fontSize: '13px', fontWeight: 600 }}>Bose Noise-Cancelling Headphones Pro</div>
+                      <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>SKU: BOSE-QC-01 • HSN: 8518</div>
                       <div style={{ marginTop: '0.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ fontSize: '18px', fontWeight: 700, color: '#34d399' }}>80 PCS in stock</span>
-                        <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Threshold: 15</span>
+                        <span style={{ fontSize: '18px', fontWeight: 700, color: '#34d399' }}>33 PCS in stock</span>
+                        <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Threshold: 8</span>
                       </div>
                     </div>
 
                     <div style={{ background: 'var(--bg-elevated)', padding: '1rem', borderRadius: 'var(--radius-sm)' }}>
-                      <div style={{ fontSize: '13px', fontWeight: 600 }}>USB-C Fast Charging Cable</div>
-                      <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>SKU: CAB-USBC-03 • HSN: 8544</div>
+                      <div style={{ fontSize: '13px', fontWeight: 600 }}>Anker 65W GaN Fast Charger</div>
+                      <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>SKU: ANK-GAN-65 • HSN: 8504</div>
                       <div style={{ marginTop: '0.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <span style={{ fontSize: '18px', fontWeight: 700, color: '#f59e0b' }}>8 PCS (LOW STOCK)</span>
-                        <span style={{ fontSize: '11px', color: '#f59e0b' }}>Threshold: 20</span>
+                        <span style={{ fontSize: '11px', color: '#f59e0b' }}>Threshold: 15</span>
                       </div>
                     </div>
                   </div>
@@ -1174,7 +1183,7 @@ export default function LandingPage({
                   borderRadius: 'var(--radius-md)'
                 }}
               >
-                Open Demo Store (Premium Electronics)
+                Apex Suite Live Preview
               </button>
             </div>
           </div>
@@ -1208,11 +1217,13 @@ export default function LandingPage({
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                fontWeight: 800,
-                color: '#ffffff',
-                fontSize: '16px'
+                padding: '5px'
               }}>
-                A
+                <img
+                  src={apexLogo}
+                  alt="Apex Logo"
+                  style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                />
               </div>
               <span style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-primary)' }}>
                 Apex GST Suite
