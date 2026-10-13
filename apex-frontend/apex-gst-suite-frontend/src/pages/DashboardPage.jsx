@@ -38,6 +38,27 @@ export default function DashboardPage({ onNavigateToNewInvoice, onNavigateToInve
     return '₹' + num.toLocaleString('en-IN', { maximumFractionDigits: 0 });
   };
 
+  // Calculate monthly turnover dynamically from issued invoices
+  const currentYear = new Date().getFullYear();
+  const months = ['Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar'];
+  const monthlyTotals = months.map(m => ({ month: m, total: 0 }));
+
+  (recentInvoices && recentInvoices.length > 0 ? recentInvoices : []).forEach(inv => {
+    if (!inv.invoiceDate) return;
+    const d = new Date(inv.invoiceDate);
+    if (isNaN(d.getTime())) return;
+    const mIdx = d.getMonth(); // 0 = Jan, 3 = Apr, etc.
+    // Map calendar month to FY month (Apr=0 ... Mar=11)
+    const fyIdx = (mIdx + 9) % 12;
+    if (fyIdx >= 0 && fyIdx < 12) {
+      monthlyTotals[fyIdx].total += (parseFloat(inv.grandTotal) || 0);
+    }
+  });
+
+  const maxVal = Math.max(...monthlyTotals.map(m => m.total), 1);
+  const currentMtdTotal = metrics?.totalSales || 0;
+  const currentMonthIdx = (new Date().getMonth() + 9) % 12;
+
   return (
     <div className="page-body">
       {/* Page Header */}
@@ -79,9 +100,15 @@ export default function DashboardPage({ onNavigateToNewInvoice, onNavigateToInve
             </span>
           </div>
           <div className="metric-value">{formatInr(metrics?.totalSales)}</div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', marginTop: '0.5rem', fontSize: '12px', color: '#10b981' }}>
-            <ArrowUpRight size={14} />
-            <span>+18.4% from last month</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', marginTop: '0.5rem', fontSize: '12px', color: (metrics?.totalSales > 0 ? '#10b981' : 'var(--text-muted)') }}>
+            {metrics?.totalSales > 0 ? (
+              <>
+                <ArrowUpRight size={14} />
+                <span>Live recorded sales</span>
+              </>
+            ) : (
+              <span>No sales recorded yet</span>
+            )}
           </div>
         </div>
 
@@ -136,32 +163,31 @@ export default function DashboardPage({ onNavigateToNewInvoice, onNavigateToInve
             <span className="badge badge-paid">Live Sync</span>
           </div>
           <div style={{ height: '180px', display: 'flex', alignItems: 'flex-end', gap: '1rem', paddingBottom: '1rem', borderBottom: '1px solid var(--border-subtle)' }}>
-            {[
-              { month: 'Apr', val: 40 },
-              { month: 'May', val: 65 },
-              { month: 'Jun', val: 50 },
-              { month: 'Jul', val: 80 },
-              { month: 'Aug', val: 70 },
-              { month: 'Sep', val: 95 },
-              { month: 'Oct', val: 85 }
-            ].map((bar, i) => (
-              <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
-                <div 
-                  style={{ 
-                    width: '100%', 
-                    height: `${bar.val * 1.5}px`, 
-                    background: i === 6 ? 'linear-gradient(180deg, #10b981, #059669)' : 'linear-gradient(180deg, #3b82f6, #1e40af)',
-                    borderRadius: '4px',
-                    transition: 'height 0.4s ease'
-                  }}
-                ></div>
-                <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{bar.month}</span>
-              </div>
-            ))}
+            {monthlyTotals.slice(0, 7).map((bar, i) => {
+              const hasSales = bar.total > 0;
+              const barHeight = hasSales ? Math.max(16, Math.min(140, Math.round((bar.total / maxVal) * 130))) : 4;
+              return (
+                <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
+                  <div 
+                    title={`${bar.month}: ${formatInr(bar.total)}`}
+                    style={{ 
+                      width: '100%', 
+                      height: `${barHeight}px`, 
+                      background: hasSales 
+                        ? (i === currentMonthIdx ? 'linear-gradient(180deg, #10b981, #059669)' : 'linear-gradient(180deg, #3b82f6, #1e40af)')
+                        : 'rgba(255, 255, 255, 0.06)',
+                      borderRadius: '4px',
+                      transition: 'height 0.4s ease'
+                    }}
+                  ></div>
+                  <span style={{ fontSize: '11px', color: i === currentMonthIdx ? '#38bdf8' : 'var(--text-muted)' }}>{bar.month}</span>
+                </div>
+              );
+            })}
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '1rem', fontSize: '12px', color: 'var(--text-secondary)' }}>
-            <span>Target: ₹25,00,000</span>
-            <span>Current MTD: ₹18,45,200 (74%)</span>
+            <span>FY Target: {metrics?.totalSales > 0 ? formatInr(Math.max(100000, metrics.totalSales * 1.5)) : '₹0'}</span>
+            <span>Current MTD: {formatInr(currentMtdTotal)}</span>
           </div>
         </div>
 
@@ -179,11 +205,11 @@ export default function DashboardPage({ onNavigateToNewInvoice, onNavigateToInve
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
                 <span style={{ color: 'var(--text-secondary)' }}>Total Invoices Issued</span>
-                <strong>{metrics?.totalInvoicesCount}</strong>
+                <strong>{metrics?.totalInvoicesCount || 0}</strong>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
                 <span style={{ color: 'var(--text-secondary)' }}>Items in Catalog</span>
-                <strong>4 items</strong>
+                <strong>{metrics?.itemsCount ?? 0} items</strong>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
                 <span style={{ color: 'var(--text-secondary)' }}>Total Vendor Payables</span>

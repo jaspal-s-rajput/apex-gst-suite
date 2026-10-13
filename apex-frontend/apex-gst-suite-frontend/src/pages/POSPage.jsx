@@ -26,8 +26,8 @@ export default function POSPage({ company }) {
     e.preventDefault();
     if (!barcodeInput.trim()) return;
 
-    const matched = items.find(i => 
-      i.barcode === barcodeInput.trim() || 
+    const matched = items.find(i =>
+      i.barcode === barcodeInput.trim() ||
       i.name.toLowerCase().includes(barcodeInput.trim().toLowerCase())
     );
 
@@ -111,10 +111,10 @@ export default function POSPage({ company }) {
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: '1.5rem', alignItems: 'flex-start' }}>
-        
+
         {/* Left Side: Barcode Scanner & Quick Item Grid */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-          
+
           {/* Barcode Scanner Input */}
           <div className="card" style={{ padding: '1.25rem' }}>
             <form onSubmit={handleBarcodeSubmit}>
@@ -293,25 +293,40 @@ export default function POSPage({ company }) {
       {/* Completed Thermal Receipt Modal */}
       {completedOrder && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
-          <div style={{ background: '#fff', color: '#000', borderRadius: '8px', maxWidth: '340px', width: '100%', padding: '1.5rem', fontFamily: 'monospace', fontSize: '12px', border: '1px solid #cbd5e1' }}>
-            <div style={{ textAlign: 'center', borderBottom: '1px dashed #000', paddingBottom: '0.5rem', marginBottom: '0.75rem' }}>
-              <h3 style={{ fontSize: '16px', fontWeight: 800, margin: 0 }}>{company?.tradeName || 'Apex Enterprises'}</h3>
-              <p style={{ margin: '2px 0' }}>GSTIN: {company?.gstin || '27AAPFU0939F1ZV'}</p>
-              <p style={{ margin: '2px 0' }}>Order #{completedOrder.orderNumber}</p>
-              <p style={{ margin: '2px 0', fontSize: '10px' }}>{completedOrder.date}</p>
+          <div 
+            id="pos-receipt-print-area"
+            style={{ 
+              background: '#ffffff', 
+              color: '#000000', 
+              borderRadius: '8px', 
+              maxWidth: '340px', 
+              width: '100%', 
+              padding: '1.5rem', 
+              fontFamily: 'monospace', 
+              fontSize: '12px', 
+              border: '1px solid #cbd5e1' 
+            }}
+          >
+            <div style={{ textAlign: 'center', borderBottom: '1px dashed #000000', paddingBottom: '0.5rem', marginBottom: '0.75rem' }}>
+              <h3 style={{ fontSize: '17px', fontWeight: 900, margin: '0 0 4px 0', color: '#000000' }}>
+                {company?.tradeName || company?.legalName || 'Apex Enterprises'}
+              </h3>
+              <p style={{ margin: '2px 0', color: '#000000' }}>GSTIN: {company?.gstin || '27AAPFU0939F1ZV'}</p>
+              <p style={{ margin: '2px 0', color: '#000000' }}>Order #{completedOrder.orderNumber}</p>
+              <p style={{ margin: '2px 0', fontSize: '10px', color: '#000000' }}>{completedOrder.date}</p>
             </div>
 
-            <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '0.75rem' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '0.75rem', color: '#000000' }}>
               <thead>
-                <tr style={{ borderBottom: '1px dashed #000' }}>
-                  <th style={{ textAlign: 'left', padding: '2px 0' }}>Item</th>
-                  <th style={{ textAlign: 'center', padding: '2px 0' }}>Qty</th>
-                  <th style={{ textAlign: 'right', padding: '2px 0' }}>Amt</th>
+                <tr style={{ borderBottom: '1px dashed #000000' }}>
+                  <th style={{ textAlign: 'left', padding: '2px 0', color: '#000000' }}>Item</th>
+                  <th style={{ textAlign: 'center', padding: '2px 0', color: '#000000' }}>Qty</th>
+                  <th style={{ textAlign: 'right', padding: '2px 0', color: '#000000' }}>Amt</th>
                 </tr>
               </thead>
               <tbody>
                 {completedOrder.cart.map((c, i) => (
-                  <tr key={i}>
+                  <tr key={i} style={{ color: '#000000' }}>
                     <td>{c.name.substring(0, 14)}</td>
                     <td style={{ textAlign: 'center' }}>{c.quantity}</td>
                     <td style={{ textAlign: 'right' }}>₹{c.sellingPrice * c.quantity}</td>
@@ -320,7 +335,7 @@ export default function POSPage({ company }) {
               </tbody>
             </table>
 
-            <div style={{ borderTop: '1px dashed #000', paddingTop: '0.5rem', lineHeight: '1.6' }}>
+            <div style={{ borderTop: '1px dashed #000000', paddingTop: '0.5rem', lineHeight: '1.6', color: '#000000' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span>Subtotal:</span>
                 <span>₹{completedOrder.subtotal}</span>
@@ -329,7 +344,7 @@ export default function POSPage({ company }) {
                 <span>GST Tax:</span>
                 <span>₹{Math.round(completedOrder.totalTax)}</span>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 800, fontSize: '14px', borderTop: '1px solid #000', paddingTop: '2px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 800, fontSize: '14px', borderTop: '1px solid #000000', paddingTop: '2px' }}>
                 <span>GRAND TOTAL:</span>
                 <span>₹{completedOrder.grandTotal}</span>
               </div>
@@ -345,11 +360,11 @@ export default function POSPage({ company }) {
               )}
             </div>
 
-            <div style={{ textAlign: 'center', marginTop: '1rem', borderTop: '1px dashed #000', paddingTop: '0.5rem', fontSize: '11px' }}>
+            <div style={{ textAlign: 'center', marginTop: '1rem', borderTop: '1px dashed #000000', paddingTop: '0.5rem', fontSize: '11px', color: '#000000' }}>
               Thank You! Visit Again.
             </div>
 
-            <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1.25rem' }}>
+            <div className="no-print" style={{ display: 'flex', gap: '0.5rem', marginTop: '1.25rem' }}>
               <button onClick={() => window.print()} className="btn btn-primary" style={{ flex: 1, padding: '0.5rem' }}>
                 <Printer size={14} /> Print
               </button>

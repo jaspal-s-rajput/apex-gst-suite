@@ -633,6 +633,7 @@ export const api = {
       totalReceivables: totalRec,
       totalPayables: isPreview ? 45000.00 : 0.00,
       totalInvoicesCount: invoices.length,
+      itemsCount: items.length,
       lowStockCount: items.filter(i => i.currentStock <= i.minStockAlert).length
     };
   },

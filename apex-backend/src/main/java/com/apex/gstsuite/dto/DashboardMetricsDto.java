@@ -15,6 +15,7 @@ public class DashboardMetricsDto {
     private BigDecimal totalPayables;
     private long totalInvoicesCount;
     private long lowStockCount;
+    private long itemsCount;
 
     public DashboardMetricsDto() {}
 
@@ -37,6 +38,7 @@ public class DashboardMetricsDto {
         public Builder totalPayables(BigDecimal val) { dto.totalPayables = val; return this; }
         public Builder totalInvoicesCount(long val) { dto.totalInvoicesCount = val; return this; }
         public Builder lowStockCount(long val) { dto.lowStockCount = val; return this; }
+        public Builder itemsCount(long val) { dto.itemsCount = val; return this; }
         public DashboardMetricsDto build() { return dto; }
     }
 
@@ -75,4 +77,7 @@ public class DashboardMetricsDto {
 
     public long getLowStockCount() { return lowStockCount; }
     public void setLowStockCount(long lowStockCount) { this.lowStockCount = lowStockCount; }
+
+    public long getItemsCount() { return itemsCount; }
+    public void setItemsCount(long itemsCount) { this.itemsCount = itemsCount; }
 }
