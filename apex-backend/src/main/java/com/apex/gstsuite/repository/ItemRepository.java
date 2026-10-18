@@ -14,6 +14,10 @@ import java.util.UUID;
 public interface ItemRepository extends JpaRepository<Item, UUID> {
     List<Item> findByCompanyIdAndIsActiveTrue(UUID companyId);
 
+    List<Item> findByCompanyId(UUID companyId);
+
+    long countByCompanyIdAndIsActiveTrue(UUID companyId);
+
     Optional<Item> findByCompanyIdAndBarcodeAndIsActiveTrue(UUID companyId, String barcode);
 
     Optional<Item> findByCompanyIdAndSkuAndIsActiveTrue(UUID companyId, String sku);

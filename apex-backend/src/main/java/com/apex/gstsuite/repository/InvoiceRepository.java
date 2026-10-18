@@ -23,6 +23,10 @@ public interface InvoiceRepository extends JpaRepository<Invoice, UUID> {
 
     List<Invoice> findByCompanyIdAndPaymentStatus(UUID companyId, PaymentStatus paymentStatus);
 
+    List<Invoice> findByCompanyIdAndPartyIdOrderByInvoiceDateAsc(UUID companyId, UUID partyId);
+
+    List<Invoice> findByPartyIdOrderByInvoiceDateAsc(UUID partyId);
+
     @Query("SELECT i FROM Invoice i WHERE i.company.id = :companyId AND i.invoiceDate >= :startDate ORDER BY i.invoiceDate DESC")
     List<Invoice> findRecentInvoices(@Param("companyId") UUID companyId, @Param("startDate") LocalDate startDate);
 }

@@ -48,7 +48,14 @@ public class ItemController {
         return ResponseEntity.ok(itemService.getLowStockItems(effectiveCompanyId));
     }
 
-    @GetMapping("/{id}")
+    @GetMapping("/movements")
+    public ResponseEntity<List<com.apex.gstsuite.dto.StockMovementResponseDto>> getAllMovements(
+            @RequestParam(required = false) UUID companyId) {
+        UUID effectiveCompanyId = companyId != null ? companyId : companyService.getOrCreateDefaultCompany().getId();
+        return ResponseEntity.ok(itemService.getAllMovements(effectiveCompanyId));
+    }
+
+    @GetMapping("/{id:[0-9a-fA-F\\-]{36}}")
     public ResponseEntity<Item> getItemById(@PathVariable UUID id) {
         return itemService.getItem(id)
                 .map(ResponseEntity::ok)
@@ -63,7 +70,14 @@ public class ItemController {
         return ResponseEntity.ok(itemService.saveItem(effectiveCompanyId, item));
     }
 
-    @PostMapping("/{id}/adjust-stock")
+    @PutMapping("/{id:[0-9a-fA-F\\-]{36}}")
+    public ResponseEntity<Item> updateItem(
+            @PathVariable UUID id,
+            @Valid @RequestBody Item item) {
+        return ResponseEntity.ok(itemService.updateItem(id, item));
+    }
+
+    @PostMapping("/{id:[0-9a-fA-F\\-]{36}}/adjust-stock")
     public ResponseEntity<Item> adjustStock(
             @PathVariable UUID id,
             @RequestBody StockAdjustRequest request) {
@@ -75,7 +89,15 @@ public class ItemController {
         ));
     }
 
-    @DeleteMapping("/{id}")
+    @GetMapping("/{id:[0-9a-fA-F\\-]{36}}/movements")
+    public ResponseEntity<List<com.apex.gstsuite.dto.StockMovementResponseDto>> getItemMovements(
+            @PathVariable UUID id,
+            @RequestParam(required = false) UUID companyId) {
+        UUID effectiveCompanyId = companyId != null ? companyId : companyService.getOrCreateDefaultCompany().getId();
+        return ResponseEntity.ok(itemService.getItemMovements(effectiveCompanyId, id));
+    }
+
+    @DeleteMapping("/{id:[0-9a-fA-F\\-]{36}}")
     public ResponseEntity<Void> deleteItem(@PathVariable UUID id) {
         itemService.deleteItem(id);
         return ResponseEntity.noContent().build();

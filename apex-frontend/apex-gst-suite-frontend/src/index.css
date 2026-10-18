@@ -738,6 +738,77 @@ textarea {
     max-width: 78mm !important;
   }
 
+  /* Barcode Sticker Sheet Print Isolation */
+  body:has(#barcode-print-station) {
+    background: #ffffff !important;
+  }
+
+  body:has(#barcode-print-station) * {
+    visibility: hidden;
+  }
+
+  body:has(#barcode-print-station) #barcode-print-station,
+  body:has(#barcode-print-station) #barcode-print-station * {
+    visibility: visible;
+  }
+
+  body:has(#barcode-print-station) #barcode-print-station {
+    position: absolute !important;
+    left: 0 !important;
+    right: 0 !important;
+    top: 0 !important;
+    margin: 0 auto !important;
+    box-shadow: none !important;
+    border: none !important;
+    padding: 5mm !important;
+    width: 100% !important;
+    max-width: 210mm !important;
+    background: #ffffff !important;
+  }
+
+  body:has(#barcode-print-station) .barcode-station-overlay {
+    position: static !important;
+    background: transparent !important;
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+
+  /* Party Ledger & Statement Print Isolation */
+  body:has(#party-statement-print-area) {
+    background: #ffffff !important;
+  }
+
+  body:has(#party-statement-print-area) * {
+    visibility: hidden;
+  }
+
+  body:has(#party-statement-print-area) #party-statement-print-area,
+  body:has(#party-statement-print-area) #party-statement-print-area * {
+    visibility: visible;
+  }
+
+  body:has(#party-statement-print-area) #party-statement-print-area {
+    position: absolute !important;
+    left: 0 !important;
+    right: 0 !important;
+    top: 0 !important;
+    margin: 0 auto !important;
+    box-shadow: none !important;
+    border: none !important;
+    padding: 10mm !important;
+    width: 100% !important;
+    max-width: 210mm !important;
+    background: #ffffff !important;
+    color: #111827 !important;
+  }
+
+  body:has(#party-statement-print-area) .party-statement-overlay {
+    position: static !important;
+    background: transparent !important;
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+
   .no-print,
   .no-print * {
     display: none !important;

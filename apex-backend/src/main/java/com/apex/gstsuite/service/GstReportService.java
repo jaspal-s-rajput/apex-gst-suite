@@ -73,7 +73,7 @@ public class GstReportService {
 
         BigDecimal netTaxPayable = totalTaxCollected.subtract(totalItcAvailable).max(BigDecimal.ZERO);
         long lowStockCount = itemRepository.findLowStockItems(companyId).size();
-        long itemsCount = itemRepository.findByCompanyId(companyId).size();
+        long itemsCount = itemRepository.countByCompanyIdAndIsActiveTrue(companyId);
 
         return DashboardMetricsDto.builder()
                 .totalSales(totalSales)

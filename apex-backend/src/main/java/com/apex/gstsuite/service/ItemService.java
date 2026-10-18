@@ -97,6 +97,62 @@ public class ItemService {
     }
 
     @Transactional
+    public Item updateItem(UUID itemId, Item updatedData) {
+        Item item = itemRepository.findById(itemId)
+                .orElseThrow(() -> new IllegalArgumentException("Item not found with ID: " + itemId));
+
+        item.setName(updatedData.getName());
+        item.setSku(updatedData.getSku());
+        item.setBarcode(updatedData.getBarcode());
+        item.setCategory(updatedData.getCategory());
+        if (updatedData.getItemType() != null) {
+            item.setItemType(updatedData.getItemType());
+        }
+        item.setHsnSacCode(updatedData.getHsnSacCode());
+        item.setUom(updatedData.getUom() != null ? updatedData.getUom() : "PCS");
+        item.setPurchasePrice(updatedData.getPurchasePrice() != null ? updatedData.getPurchasePrice() : BigDecimal.ZERO);
+        item.setSellingPrice(updatedData.getSellingPrice() != null ? updatedData.getSellingPrice() : BigDecimal.ZERO);
+        item.setGstRate(updatedData.getGstRate() != null ? updatedData.getGstRate() : BigDecimal.valueOf(18.0));
+        item.setCessRate(updatedData.getCessRate() != null ? updatedData.getCessRate() : BigDecimal.ZERO);
+        item.setMinStockAlert(updatedData.getMinStockAlert() != null ? updatedData.getMinStockAlert() : BigDecimal.valueOf(5.0));
+        item.setBatchTrackingEnabled(Boolean.TRUE.equals(updatedData.getBatchTrackingEnabled()));
+        item.setBatchNumber(updatedData.getBatchNumber());
+        item.setExpiryDate(updatedData.getExpiryDate());
+
+        return itemRepository.save(item);
+    }
+
+    @Transactional(readOnly = true)
+    public List<com.apex.gstsuite.dto.StockMovementResponseDto> getItemMovements(UUID companyId, UUID itemId) {
+        return stockMovementRepository.findByCompanyIdAndItemIdOrderByCreatedAtDesc(companyId, itemId)
+                .stream()
+                .map(this::mapToMovementDto)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<com.apex.gstsuite.dto.StockMovementResponseDto> getAllMovements(UUID companyId) {
+        return stockMovementRepository.findByCompanyIdOrderByCreatedAtDesc(companyId)
+                .stream()
+                .map(this::mapToMovementDto)
+                .toList();
+    }
+
+    private com.apex.gstsuite.dto.StockMovementResponseDto mapToMovementDto(StockMovement sm) {
+        return com.apex.gstsuite.dto.StockMovementResponseDto.builder()
+                .id(sm.getId())
+                .itemId(sm.getItem() != null ? sm.getItem().getId() : null)
+                .itemName(sm.getItem() != null ? sm.getItem().getName() : "Unknown Item")
+                .movementType(sm.getMovementType())
+                .quantityChange(sm.getQuantityChange())
+                .balanceAfter(sm.getBalanceAfter())
+                .referenceNumber(sm.getReferenceNumber())
+                .remarks(sm.getRemarks())
+                .createdAt(sm.getCreatedAt())
+                .build();
+    }
+
+    @Transactional
     public void deleteItem(UUID id) {
         itemRepository.findById(id).ifPresent(item -> {
             item.setIsActive(false);

@@ -9,7 +9,9 @@ import {
   AlertCircle, 
   Sparkles,
   Save,
-  ArrowLeft
+  ArrowLeft,
+  ShieldAlert,
+  Clock
 } from 'lucide-react';
 import InvoicePrintPreview from '../components/invoice/InvoicePrintPreview';
 import { api } from '../services/api';
@@ -48,6 +50,10 @@ export default function CreateInvoicePage({ company, onBack, onInvoiceSaved }) {
       if (pList[0].stateCode) {
         setPlaceOfSupply(pList[0].stateCode);
       }
+      const days = parseInt(pList[0].creditPeriodDays) || 30;
+      const d = new Date();
+      d.setDate(d.getDate() + days);
+      setDueDate(d.toISOString().slice(0, 10));
     }
   }
 
@@ -60,6 +66,12 @@ export default function CreateInvoicePage({ company, onBack, onInvoiceSaved }) {
     const p = parties.find(x => x.id === partyId);
     if (p && p.stateCode) {
       setPlaceOfSupply(p.stateCode);
+    }
+    if (p) {
+      const days = parseInt(p.creditPeriodDays) || 30;
+      const baseDate = invoiceDate ? new Date(invoiceDate) : new Date();
+      baseDate.setDate(baseDate.getDate() + days);
+      setDueDate(baseDate.toISOString().slice(0, 10));
     }
   };
 
@@ -186,6 +198,13 @@ export default function CreateInvoicePage({ company, onBack, onInvoiceSaved }) {
     items: lines
   };
 
+  const partyCreditLimit = parseFloat(selectedParty?.creditLimit) || 0;
+  const partyCurrentBalance = parseFloat(selectedParty?.currentBalance) || 0;
+  const unpaidInvoiceAmount = Math.max(0, grandTotal - (parseFloat(amountPaid) || 0));
+  const projectedExposure = partyCurrentBalance + unpaidInvoiceAmount;
+  const isCreditLimitExceeded = partyCreditLimit > 0 && projectedExposure > partyCreditLimit;
+  const creditExcessAmount = isCreditLimitExceeded ? projectedExposure - partyCreditLimit : 0;
+
   // Handle Save
   const handleSaveInvoice = async () => {
     if (lines.length === 0) {
@@ -197,6 +216,14 @@ export default function CreateInvoicePage({ company, onBack, onInvoiceSaved }) {
       alert('Please provide a name or select an item from catalog for all line items.');
       return;
     }
+
+    if (isCreditLimitExceeded) {
+      const confirmMsg = `⚠️ Credit Limit Warning:\n\nCustomer "${selectedParty?.name}" has a credit limit of ₹${partyCreditLimit.toLocaleString('en-IN')}.\nCurrent outstanding balance: ₹${partyCurrentBalance.toLocaleString('en-IN')}.\n\nThis invoice of ₹${grandTotal.toLocaleString('en-IN')} (Unpaid: ₹${unpaidInvoiceAmount.toLocaleString('en-IN')}) will push total credit exposure to ₹${projectedExposure.toLocaleString('en-IN')}, exceeding their limit by ₹${creditExcessAmount.toLocaleString('en-IN')}!\n\nDo you want to authorize and issue this invoice anyway?`;
+      if (!window.confirm(confirmMsg)) {
+        return;
+      }
+    }
+
     setSaving(true);
     try {
       const payload = {
@@ -339,10 +366,18 @@ export default function CreateInvoicePage({ company, onBack, onInvoiceSaved }) {
             </div>
 
             {selectedParty && (
-              <div style={{ background: 'var(--bg-elevated)', borderRadius: 'var(--radius-md)', padding: '0.75rem', marginTop: '0.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ background: 'var(--bg-elevated)', borderRadius: 'var(--radius-md)', padding: '0.75rem', marginTop: '0.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
                 <div>
                   <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>GSTIN: </span>
                   <strong style={{ fontFamily: 'var(--font-mono)', fontSize: '13px' }}>{selectedParty.gstin || 'Unregistered'}</strong>
+                  <span style={{ marginLeft: '0.75rem', fontSize: '12px', color: 'var(--text-muted)' }}>
+                    Terms: <strong>{selectedParty.creditPeriodDays || 30} Days</strong>
+                  </span>
+                  {partyCreditLimit > 0 && (
+                    <span style={{ marginLeft: '0.75rem', fontSize: '12px', color: isCreditLimitExceeded ? '#f87171' : 'var(--text-muted)' }}>
+                      Limit: <strong>₹{partyCreditLimit.toLocaleString('en-IN')}</strong>
+                    </span>
+                  )}
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                   {isInterState ? (
@@ -350,6 +385,34 @@ export default function CreateInvoicePage({ company, onBack, onInvoiceSaved }) {
                   ) : (
                     <span className="badge badge-paid" style={{ fontSize: '10px' }}>Intra-State (CGST + SGST)</span>
                   )}
+                </div>
+              </div>
+            )}
+
+            {/* Credit Limit Alert Banner */}
+            {isCreditLimitExceeded && (
+              <div
+                style={{
+                  marginTop: '0.75rem',
+                  padding: '0.75rem 1rem',
+                  borderRadius: 'var(--radius-md)',
+                  background: 'rgba(239, 68, 68, 0.12)',
+                  border: '1px solid rgba(239, 68, 68, 0.35)',
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: '0.65rem'
+                }}
+              >
+                <ShieldAlert size={18} color="#ef4444" style={{ flexShrink: 0, marginTop: '2px' }} />
+                <div style={{ fontSize: '12.5px', color: '#fca5a5', lineHeight: '1.4' }}>
+                  <strong style={{ color: '#f87171' }}>Credit Limit Alert:</strong> Party's assigned credit limit is{' '}
+                  <strong>₹{partyCreditLimit.toLocaleString('en-IN')}</strong>. Current outstanding is{' '}
+                  <strong>₹{partyCurrentBalance.toLocaleString('en-IN')}.</strong>
+                  With this new invoice (₹{unpaidInvoiceAmount.toLocaleString('en-IN')}), total exposure will reach{' '}
+                  <strong style={{ color: '#ffffff' }}>₹{projectedExposure.toLocaleString('en-IN')}</strong>, exceeding their credit limit by{' '}
+                  <strong style={{ color: '#ffffff', textDecoration: 'underline' }}>
+                    ₹{creditExcessAmount.toLocaleString('en-IN', { minimumFractionDigits: 0 })}
+                  </strong>!
                 </div>
               </div>
             )}

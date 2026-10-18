@@ -13,4 +13,6 @@ public interface PurchaseBillRepository extends JpaRepository<PurchaseBill, UUID
     List<PurchaseBill> findByCompanyIdOrderByBillDateDesc(UUID companyId);
     List<PurchaseBill> findByCompanyIdAndBillDateBetweenOrderByBillDateDesc(
             UUID companyId, LocalDate startDate, LocalDate endDate);
+    List<PurchaseBill> findByCompanyIdAndVendorIdOrderByBillDateAsc(UUID companyId, UUID vendorId);
+    List<PurchaseBill> findByVendorIdOrderByBillDateAsc(UUID vendorId);
 }

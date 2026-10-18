@@ -447,6 +447,189 @@ export const api = {
     return newParty;
   },
 
+  async updateParty(party) {
+    const store = this.getActiveStore();
+    const companyId = store?.id;
+    try {
+      const res = await fetch(`${API_BASE_URL}/parties/${party.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(party)
+      });
+      if (res.ok) return await res.json();
+    } catch (_) { }
+
+    // Fallback localStorage
+    if (companyId) {
+      const storePartiesKey = `apex_parties_${companyId}`;
+      const parties = JSON.parse(localStorage.getItem(storePartiesKey) || '[]');
+      const idx = parties.findIndex(p => p.id === party.id);
+      if (idx !== -1) {
+        parties[idx] = { ...parties[idx], ...party };
+        localStorage.setItem(storePartiesKey, JSON.stringify(parties));
+      }
+    } else {
+      const idx = MOCK_PARTIES.findIndex(p => p.id === party.id);
+      if (idx !== -1) {
+        MOCK_PARTIES[idx] = { ...MOCK_PARTIES[idx], ...party };
+      }
+    }
+    return party;
+  },
+
+  async deleteParty(partyId) {
+    const store = this.getActiveStore();
+    const companyId = store?.id;
+    try {
+      const res = await fetch(`${API_BASE_URL}/parties/${partyId}`, {
+        method: 'DELETE'
+      });
+      if (res.ok) return true;
+    } catch (_) { }
+
+    if (companyId) {
+      const storePartiesKey = `apex_parties_${companyId}`;
+      const parties = JSON.parse(localStorage.getItem(storePartiesKey) || '[]');
+      const filtered = parties.filter(p => p.id !== partyId);
+      localStorage.setItem(storePartiesKey, JSON.stringify(filtered));
+    } else {
+      const idx = MOCK_PARTIES.findIndex(p => p.id === partyId);
+      if (idx !== -1) MOCK_PARTIES.splice(idx, 1);
+    }
+    return true;
+  },
+
+  async getPartyStatement(partyId, fromDate = null, toDate = null) {
+    try {
+      let url = `${API_BASE_URL}/parties/${partyId}/statement`;
+      const params = new URLSearchParams();
+      if (fromDate) params.append('fromDate', fromDate);
+      if (toDate) params.append('toDate', toDate);
+      const qs = params.toString();
+      if (qs) url += `?${qs}`;
+
+      const res = await fetch(url);
+      if (res.ok) return await res.json();
+    } catch (_) { }
+
+    // Offline computation fallback
+    const parties = await this.getParties();
+    const party = parties.find(p => p.id === partyId) || { id: partyId, name: 'Party' };
+    const invoices = await this.getInvoices();
+    const partyInvoices = invoices.filter(inv => inv.party?.id === partyId || inv.partyId === partyId);
+
+    const initialOpening = parseFloat(party.openingBalance) || 0;
+    let runningBalance = initialOpening;
+    let totalDebit = 0;
+    let totalCredit = 0;
+    let overdueAmount = 0;
+    let overdueCount = 0;
+    const entries = [];
+
+    if (initialOpening !== 0) {
+      const opDebit = initialOpening > 0 ? initialOpening : 0;
+      const opCredit = initialOpening < 0 ? Math.abs(initialOpening) : 0;
+      totalDebit += opDebit;
+      totalCredit += opCredit;
+      entries.push({
+        date: party.createdAt ? party.createdAt.slice(0, 10) : new Date().toISOString().slice(0, 10),
+        referenceNumber: 'OP-BAL',
+        type: 'OPENING_BALANCE',
+        description: 'Opening Account Balance',
+        debit: opDebit,
+        credit: opCredit,
+        balance: initialOpening,
+        status: 'PAID',
+        isOverdue: false
+      });
+    }
+
+    // Sort invoices ascending by date
+    const sortedInv = [...partyInvoices].sort((a, b) => new Date(a.invoiceDate || a.createdAt) - new Date(b.invoiceDate || b.createdAt));
+    for (const inv of sortedInv) {
+      const total = parseFloat(inv.grandTotal) || 0;
+      const paid = parseFloat(inv.amountPaid) || 0;
+      const bal = parseFloat(inv.balanceAmount) !== undefined ? parseFloat(inv.balanceAmount) : Math.max(0, total - paid);
+
+      const terms = parseInt(party.creditPeriodDays) || 30;
+      let dueDate = inv.dueDate;
+      if (!dueDate && inv.invoiceDate) {
+        const d = new Date(inv.invoiceDate);
+        d.setDate(d.getDate() + terms);
+        dueDate = d.toISOString().slice(0, 10);
+      }
+      const isOverdue = inv.paymentStatus !== 'PAID' && dueDate && new Date(dueDate) < new Date();
+      if (isOverdue && bal > 0) {
+        overdueAmount += bal;
+        overdueCount++;
+      }
+
+      runningBalance += total;
+      totalDebit += total;
+
+      entries.push({
+        date: inv.invoiceDate || (inv.createdAt ? inv.createdAt.slice(0, 10) : new Date().toISOString().slice(0, 10)),
+        referenceNumber: inv.invoiceNumber,
+        type: 'INVOICE',
+        description: `Tax Invoice (${inv.invoiceType || 'TAX_INVOICE'})`,
+        debit: total,
+        credit: 0,
+        balance: runningBalance,
+        status: inv.paymentStatus || 'UNPAID',
+        dueDate: dueDate,
+        isOverdue: isOverdue
+      });
+
+      if (paid > 0) {
+        runningBalance -= paid;
+        totalCredit += paid;
+        entries.push({
+          date: inv.invoiceDate || (inv.createdAt ? inv.createdAt.slice(0, 10) : new Date().toISOString().slice(0, 10)),
+          referenceNumber: inv.invoiceNumber,
+          type: 'PAYMENT',
+          description: `Payment Received (${inv.paymentMode || 'Direct'})`,
+          debit: 0,
+          credit: paid,
+          balance: runningBalance,
+          status: 'PAID',
+          dueDate: null,
+          isOverdue: false
+        });
+      }
+    }
+
+    const creditLimit = parseFloat(party.creditLimit) || 0;
+    const creditLimitExceeded = creditLimit > 0 && runningBalance > creditLimit;
+    const excessCreditAmount = creditLimitExceeded ? runningBalance - creditLimit : 0;
+
+    return {
+      partyId: party.id,
+      partyName: party.name,
+      partyType: party.partyType || 'CUSTOMER',
+      gstin: party.gstin,
+      pan: party.pan,
+      phone: party.phone,
+      email: party.email,
+      billingAddress: party.billingAddress,
+      stateCode: party.stateCode,
+      stateName: party.stateName,
+      creditPeriodDays: parseInt(party.creditPeriodDays) || 30,
+      creditLimit: creditLimit,
+      openingBalance: initialOpening,
+      currentBalance: runningBalance,
+      fromDate,
+      toDate,
+      totalDebit,
+      totalCredit,
+      closingBalance: runningBalance,
+      creditLimitExceeded,
+      excessCreditAmount,
+      overdueAmount,
+      overdueInvoicesCount: overdueCount,
+      entries
+    };
+  },
+
   // Items & Inventory
   async getItems(search = '') {
     const store = this.getActiveStore();
@@ -516,6 +699,133 @@ export const api = {
       MOCK_ITEMS.push(newItem);
     }
     return newItem;
+  },
+
+  async updateItem(item) {
+    const store = this.getActiveStore();
+    const companyId = store?.id;
+    try {
+      const url = `${API_BASE_URL}/items/${item.id}`;
+      const res = await fetch(url, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(item)
+      });
+      if (res.ok) return await res.json();
+    } catch (_) { }
+
+    // Fallback local storage
+    if (companyId) {
+      const storeItemsKey = `apex_items_${companyId}`;
+      const existing = JSON.parse(localStorage.getItem(storeItemsKey) || '[]');
+      const updated = existing.map(i => i.id === item.id ? { ...i, ...item } : i);
+      localStorage.setItem(storeItemsKey, JSON.stringify(updated));
+    } else {
+      const idx = MOCK_ITEMS.findIndex(i => i.id === item.id);
+      if (idx !== -1) MOCK_ITEMS[idx] = { ...MOCK_ITEMS[idx], ...item };
+    }
+    return item;
+  },
+
+  async adjustStock(itemId, quantityChange, movementType = 'ADJUSTMENT_CORRECTION', remarks = '') {
+    const store = this.getActiveStore();
+    const companyId = store?.id;
+    try {
+      const url = `${API_BASE_URL}/items/${itemId}/adjust-stock`;
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          quantityChange,
+          movementType,
+          remarks
+        })
+      });
+      if (res.ok) return await res.json();
+    } catch (_) { }
+
+    // Fallback local storage
+    let updatedItem = null;
+    const storeItemsKey = companyId ? `apex_items_${companyId}` : null;
+    const items = storeItemsKey ? JSON.parse(localStorage.getItem(storeItemsKey) || '[]') : MOCK_ITEMS;
+    const itemIndex = items.findIndex(i => i.id === itemId);
+    if (itemIndex !== -1) {
+      const current = parseFloat(items[itemIndex].currentStock) || 0;
+      const nextStock = Math.max(0, current + parseFloat(quantityChange));
+      items[itemIndex].currentStock = nextStock;
+      updatedItem = items[itemIndex];
+      if (storeItemsKey) {
+        localStorage.setItem(storeItemsKey, JSON.stringify(items));
+      }
+
+      // Record local stock movement
+      const movementsKey = companyId ? `apex_stock_movements_${companyId}` : 'apex_stock_movements';
+      const movements = JSON.parse(localStorage.getItem(movementsKey) || '[]');
+      movements.unshift({
+        id: 'sm-' + Date.now(),
+        itemId: itemId,
+        itemName: items[itemIndex].name,
+        movementType: movementType,
+        quantityChange: parseFloat(quantityChange),
+        balanceAfter: nextStock,
+        remarks: remarks || 'Manual Adjustment',
+        createdAt: new Date().toISOString()
+      });
+      localStorage.setItem(movementsKey, JSON.stringify(movements));
+    }
+    return updatedItem;
+  },
+
+  async getItemMovements(itemId) {
+    const store = this.getActiveStore();
+    const companyId = store?.id;
+    try {
+      const url = companyId
+        ? `${API_BASE_URL}/items/${itemId}/movements?companyId=${encodeURIComponent(companyId)}`
+        : `${API_BASE_URL}/items/${itemId}/movements`;
+      const res = await fetch(url);
+      if (res.ok) return await res.json();
+    } catch (_) { }
+
+    const movementsKey = companyId ? `apex_stock_movements_${companyId}` : 'apex_stock_movements';
+    const movements = JSON.parse(localStorage.getItem(movementsKey) || '[]');
+    return movements.filter(m => m.itemId === itemId);
+  },
+
+  async getAllMovements() {
+    const store = this.getActiveStore();
+    const companyId = store?.id;
+    try {
+      const url = companyId
+        ? `${API_BASE_URL}/items/movements?companyId=${encodeURIComponent(companyId)}`
+        : `${API_BASE_URL}/items/movements`;
+      const res = await fetch(url);
+      if (res.ok) return await res.json();
+    } catch (_) { }
+
+    const movementsKey = companyId ? `apex_stock_movements_${companyId}` : 'apex_stock_movements';
+    return JSON.parse(localStorage.getItem(movementsKey) || '[]');
+  },
+
+  async deleteItem(itemId) {
+    const store = this.getActiveStore();
+    const companyId = store?.id;
+    try {
+      const url = `${API_BASE_URL}/items/${itemId}`;
+      const res = await fetch(url, { method: 'DELETE' });
+      if (res.ok) return true;
+    } catch (_) { }
+
+    if (companyId) {
+      const storeItemsKey = `apex_items_${companyId}`;
+      const existing = JSON.parse(localStorage.getItem(storeItemsKey) || '[]');
+      const filtered = existing.filter(i => i.id !== itemId);
+      localStorage.setItem(storeItemsKey, JSON.stringify(filtered));
+    } else {
+      const idx = MOCK_ITEMS.findIndex(i => i.id === itemId);
+      if (idx !== -1) MOCK_ITEMS.splice(idx, 1);
+    }
+    return true;
   },
 
   // Invoices
